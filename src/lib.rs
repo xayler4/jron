@@ -32,6 +32,6 @@ impl<'a> std::fmt::Display for JSONObject<'a> {
     }
 }
 
-pub fn parse_json<'a, R>(data: &str) -> Result<JSONObject<'a>, Error>{
+pub fn parse_json<'a>(data: &str) -> Result<JSONObject<'a>, Error>{
     Ok(JSONObject::Number(1))
 }
