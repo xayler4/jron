@@ -1,5 +1,5 @@
 use jron::parse_json;
 
 fn main() {
-    parse_json("{\"key\": 22}");
+    parse_json("{\"key\": true}");
 }
