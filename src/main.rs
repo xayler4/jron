@@ -1,5 +1,6 @@
 use jron::parse_json;
 
 fn main() {
-    parse_json("{\"key\": true}");
+    let string = std::fs::read_to_string("res/test.json").unwrap();
+    parse_json(&string);
 }

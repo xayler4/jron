@@ -8,16 +8,32 @@ pub fn tokenize_json(data: &Vec<char>) -> Result<Vec<&[char]>, TokenUnexpectedEr
     let mut vec = Vec::new();
     let mut iter = data.iter().enumerate();
     while let Some((i, c)) = iter.next() {
-        match token_ignore(&c) {
+        match tokenize_ignore(&c) {
             Ok(_) => (),
             Err(_) => {
                 continue;
             }
         }
+        match tokenize_numeric(&data[i..]) {
+            Ok(slice) => {
+                vec.push(slice);
+                iter.advance_by(slice.len() - 1).unwrap();
+                continue;
+            }
+            Err(_) => ()
+        }
+        match tokenize_null(&data[i..]) {
+            Ok(slice) => {
+                vec.push(slice);
+                iter.advance_by(slice.len() - 1).unwrap();
+                continue;
+            }
+            Err(_) => ()
+        }
         match tokenize_bool(&data[i..]) {
             Ok(slice) => {
                 vec.push(slice);
-                iter.nth(slice.len()+i);
+                iter.advance_by(slice.len() - 1).unwrap();
                 continue;
             }
             Err(_) => ()
@@ -25,7 +41,7 @@ pub fn tokenize_json(data: &Vec<char>) -> Result<Vec<&[char]>, TokenUnexpectedEr
         match tokenize_string(&data[i..]) {
             Ok(slice) => {
                 vec.push(slice);
-                iter.nth(slice.len()+i);
+                iter.advance_by(slice.len() - 1).unwrap();
                 continue;
             }
             Err(_) => ()
@@ -43,6 +59,22 @@ pub fn tokenize_json(data: &Vec<char>) -> Result<Vec<&[char]>, TokenUnexpectedEr
     Ok(vec)
 }
 
+fn tokenize_numeric(data: &[char]) -> Result<&[char], TokenNotFoundError>{
+    let mut i = 0;
+    for c in data.iter(){
+        if c.is_ascii_digit() {
+            i+=1;
+        }
+        else if i == 0{
+            return Err(TokenNotFoundError{});
+        }
+        else {
+            break;
+        }
+    }
+    Ok(&data[0..i])
+}
+
 fn tokenize_bool(data: &[char]) -> Result<&[char], TokenNotFoundError>{
     const TRUE_TOKEN: [char; 4] = ['t', 'r', 'u', 'e'];
     const FALSE_TOKEN: [char; 5] = ['f', 'a', 'l', 's', 'e'];
@@ -51,8 +83,8 @@ fn tokenize_bool(data: &[char]) -> Result<&[char], TokenNotFoundError>{
         if data[i] != *c {
             break;
         } 
-        else if i == FALSE_TOKEN.len() {
-            return Ok(&data[0..=TRUE_TOKEN.len()]);
+        else if i == TRUE_TOKEN.len() - 1 {
+            return Ok(&data[0..=i]);
         }
     }
 
@@ -62,9 +94,20 @@ fn tokenize_bool(data: &[char]) -> Result<&[char], TokenNotFoundError>{
         } 
     }
 
-    Ok(&data[0..=FALSE_TOKEN.len()])
+    Ok(&data[0..FALSE_TOKEN.len()])
 }
 
+fn tokenize_null(data: &[char]) -> Result<&[char], TokenNotFoundError>{
+    const NULL_TOKEN: [char; 4] = ['n', 'u', 'l', 'l'];
+
+    for (i, c) in NULL_TOKEN.iter().enumerate()  {
+        if data[i] != *c {
+            return Err(TokenNotFoundError{});
+        } 
+    }
+
+    Ok(&data[0..NULL_TOKEN.len()])
+}
 
 fn tokenize_string(data: &[char]) -> Result<&[char], TokenNotFoundError>{
     let mut iter = data.iter();
@@ -89,7 +132,7 @@ fn tokenize_syntax(c: &char) ->Result<&char, TokenNotFoundError> {
     Err(TokenNotFoundError{})
 }
 
-fn token_ignore(c: &char) -> Result<&char, TokenIgnoredError>{
+fn tokenize_ignore(c: &char) -> Result<&char, TokenIgnoredError>{
     const IGNORED_TOKENS: &str = " \n\r";
     if IGNORED_TOKENS.contains(*c) {
         return Err(TokenIgnoredError{});
